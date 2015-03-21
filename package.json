@@ -1,0 +1,16 @@
+{
+  "name": "jarvis",
+  "version": "0.0.0",
+  "private": true,
+
+  "author": "Wagner Castro <wagner.ltc@gmail.com>",
+
+  "description": ".",
+
+  "dependencies": {
+  },
+
+  "engines": {
+    "node": "0.10.x"
+  }
+}
