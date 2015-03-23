@@ -1,4 +1,9 @@
+#noinspection JSUnresolvedVariable
 module.exports = (robot) ->
+
+  repeticoes = null
+  repeticoesListadas = null
+  salas = null
 
   robot.respond /repita[^0-9]*([0-9]{1,5})[ ]*(vezes|vez)[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
     grandeza = response.match[4]
@@ -15,23 +20,44 @@ module.exports = (robot) ->
     intervalo *= response.match[3]
     timeout = intervalo * qtdRepeticoes
     texto = response.match[5]
-    repeticao = new Repeticao qtdRepeticoes, intervalo, timeout, texto
+
+    if !salas
+      response.send "Configure quais as salas."
+      return
+
+    repeticao = new Repeticao qtdRepeticoes, intervalo, timeout, texto, salas
 
     if repeticoes.put repeticao
       repeticao.onStop = ->
-        repeticoes.remove(repeticao)
+        repeticoes.remove repeticao
         return
       repeticao.iniciar response
+      persistir()
     else
       response.send "Esta repetição já existe."
       listarRepeticoes response
+    return
+
+  robot.respond /.*(repetindo)[^?]*(salas|sala)[^?][?]/i, (response) ->
+    if salas
+      response.send "As repetições inicadas agora serão realizadas nas salas #{salas}."
+    else
+      response.send "Não existem salas configuradas no momento."
     return
 
   robot.respond /.*(repetindo)[^?]*[?]/i, (response) ->
     listarRepeticoes response
     return
 
-  robot.respond /.*(pare|cancele).*(repetir|repeticao)[^0-9]*([0-9]*){0,1}/i, (response) ->
+  robot.respond /.*repita.*(salas|sala)[ :](.*)/i, (response) ->
+    if response.match[2]
+      salas = response.match[2]
+      response.send "Ok. As salas de repetição agora são: " + salas
+    else
+      response.send "Não entendí em quais salas você quer que eu repita."
+    return
+
+  robot.respond /.*(pare|cancele|parar|para).*(repetir|repeti..o)[^0-9]*([0-9]*)/i, (response) ->
     if !repeticoes.size()
       response.send "Não estou repetindo nada no momento."
       return
@@ -44,22 +70,22 @@ module.exports = (robot) ->
       switch response.match[1]
         when 'pare' then verbo = 'parei'
         when 'cancele' then verbo = 'cancelei'
+        else
+          return
       response.send "Pronto, #{verbo}"
     else
       response.send "Esta opção já era."
       listarRepeticoes(response)
     return
 
-
-
-
   class Repeticao
 
-    constructor: (repeticoes, intervalo, timeout, texto) ->
+    constructor: (repeticoes, intervalo, timeout, texto, salas) ->
       @repeticoes = repeticoes
       @intervalo = intervalo
       @timeout = timeout
       @texto = texto
+      @salas = salas
       @_construidoEm = new Date()
       @_iniciadoEm = 0
       @_paradoEm = 0
@@ -68,32 +94,34 @@ module.exports = (robot) ->
 
     iniciar: (response) ->
       this.parar true #isChamadaInterna
+      obj = this
+      for sala in obj.salas.split(',')
+        setTimeout () ->
+          obj._iniciadoEm = new Date()
+          robot.messageRoom sala, obj.texto
+
+          obj.intervaloRepeticaoId = setInterval () ->
+            for sala in obj.salas.split(',')
+              robot.messageRoom sala, obj.texto
+          , obj.intervalo
+
+          obj.timeoutRepeticaoId = setTimeout () ->
+            console.info(obj)
+            clearInterval(obj.intervaloRepeticaoId)
+            obj.intervaloRepeticaoId = null
+            clearTimeout(obj.timeoutRepeticaoId)
+            obj.timeoutRepeticaoId = null
+            obj._paradoEm = new Date()
+            if obj.onStop
+              obj.onStop()
+            return
+          , obj.timeout
+          return
+        , 500
       setTimeout () ->
         response.send "Ok. Iniciando."
         return
       , 100
-      obj = this
-      setTimeout () ->
-        obj._iniciadoEm = new Date()
-        response.send obj.texto
-
-        obj.intervaloRepeticaoId = setInterval () ->
-          response.send obj.texto
-        , obj.intervalo
-
-        obj.timeoutRepeticaoId = setTimeout () ->
-          console.info(obj)
-          clearInterval(obj.intervaloRepeticaoId)
-          obj.intervaloRepeticaoId = null
-          clearTimeout(obj.timeoutRepeticaoId)
-          obj.timeoutRepeticaoId = null
-          obj._paradoEm = new Date()
-          if obj.onStop
-            obj.onStop()
-          return
-        , obj.timeout
-        return
-      , 500
       return
 
     parar: (isChamadaInterna) ->
@@ -135,7 +163,7 @@ module.exports = (robot) ->
       return !@_paradoEm
 
     toString: ->
-      return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}']"
+      return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, salas= #{@salas}, texto= '#{@texto}']"
 
   class RepeticaoSet
     @_hashSet
@@ -175,9 +203,9 @@ module.exports = (robot) ->
     size: ->
       return @_keyList.length
 
-  repeticoes = new RepeticaoSet()
 
-  repeticoesListadas = {}
+
+
   listarRepeticoes = (response) ->
     if !repeticoes.size()
       response.send "Não estou repetindo nada no momento."
@@ -200,3 +228,26 @@ module.exports = (robot) ->
         return
       , i * 750
     return
+
+  persistir = ->
+    robot.brain.set 'repeticoes', repeticoes
+    robot.brain.set 'repeticoesListadas', repeticoesListadas
+    robot.brain.set 'salas', salas
+    return
+
+  carregar = ->
+    repeticoes = robot.brain.get 'repeticoes'
+    if !repeticoes
+      repeticoes = new RepeticaoSet()
+    repeticoesListadas = robot.brain.get 'repeticoesListadas'
+    if !repeticoesListadas
+      repeticoesListadas = {}
+    #noinspection JSUnresolvedVariable
+    if process.env.HUBOT_SALAS_PARA_REPETICAO
+      salas = process.env.HUBOT_SALAS_PARA_REPETICAO
+    else
+      salas = robot.brain.get 'salas'
+    return
+    #TODO:break implementar carga no objeto repeticao
+
+  carregar()
