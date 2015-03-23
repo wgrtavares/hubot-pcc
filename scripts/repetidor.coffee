@@ -3,7 +3,6 @@ module.exports = (robot) ->
 
   repeticoes = null
   repeticoesListadas = null
-  salas = null
 
   respond = (regexp, callback) ->
     robot.respond regexp, (response) ->
@@ -25,43 +24,27 @@ module.exports = (robot) ->
         return
 
     qtdRepeticoes = response.match[1]
+    if qtdRepeticoes > 1
+      qtdRepeticoes--
     intervalo *= response.match[3]
     timeout = intervalo * qtdRepeticoes
     texto = response.match[5]
+    sala = response.envelope.room
 
-    if !salas
-      response.send "Configure quais as salas."
-      return
-
-    repeticao = new Repeticao qtdRepeticoes, intervalo, timeout, texto, salas
+    repeticao = new Repeticao qtdRepeticoes, intervalo, timeout, texto, sala
 
     if repeticoes.put repeticao
       repeticao.onStop = ->
         repeticoes.remove repeticao
         return
-      repeticao.iniciar response, robot.messageRoom
+      repeticao.iniciar response
     else
       response.send "Esta repetição já existe."
       listarRepeticoes response
     return
 
-  respond /.*(repetindo)[^?]*(salas|sala)[^?][?]/i, (response) ->
-    if salas
-      response.send "As repetições inicadas agora serão realizadas nas salas #{salas}."
-    else
-      response.send "Não existem salas configuradas no momento."
-    return
-
   respond /.*(repetindo)[^?]*[?]/i, (response) ->
     listarRepeticoes response
-    return
-
-  respond /.*repita.*(salas|sala)[ :](.*)/i, (response) ->
-    if response.match[2]
-      salas = response.match[2]
-      response.send "Ok. As salas de repetição agora são: " + salas
-    else
-      response.send "Não entendí em quais salas você quer que eu repita."
     return
 
   respond /.*(pare|cancele|parar|para).*(repetir|repeti..o)[^0-9]*([0-9]*)/i, (response) ->
@@ -85,49 +68,39 @@ module.exports = (robot) ->
       listarRepeticoes(response)
     return
 
-  respond /qual o id dessa sala?/i, (response) ->
-    response.send response.envelope.room
-    return
 
   class Repeticao
 
-    constructor: (repeticoes, intervalo, timeout, texto, salas) ->
+    constructor: (repeticoes, intervalo, timeout, texto, sala) ->
       @repeticoes = repeticoes
       @intervalo = intervalo
       @timeout = timeout
       @texto = texto
-      @salas = salas
+      @sala = sala
       @_construidoEm = (new Date()).getTime()
       @_iniciadoEm = 0
       @_paradoEm = 0
       @onStop = null
       return
 
-    iniciar: (response) ->
+    iniciar: () ->
 
       @_iniciadoEm = (new Date()).getTime()
       this.parar true #isChamadaInterna
 
-      if (!response)
-        return
-
+      _sala = @sala
       setTimeout () ->
-        response.send "Ok. Iniciando."
+        robot.messageRoom _sala, "Ok. Iniciando."
         return
       , 100
 
       obj = this
-      _sala = @salas
-#      for _sala in _salas
       setTimeout () ->
-        obj._iniciadoEm = new Date()
-        console.log(JSON.stringify(response.envelope))
-        response.envelope = {room: _sala.toString()}
-        response.send obj.texto
+        obj._iniciadoEm = new Date().getTime()
+        robot.messageRoom _sala, obj.texto
 
         obj.intervaloRepeticaoId = setInterval () ->
-          console.log(obj.texto)
-          response.send obj.texto
+          robot.messageRoom _sala, obj.texto
           return
         , obj.intervalo
 
@@ -145,14 +118,14 @@ module.exports = (robot) ->
       , 500
       return
 
-    reiniciar: (response) ->
+    reiniciar: () ->
       @timeout = @_iniciadoEm + @timeout - (new Date()).getTime();
       if @timeout <= 0
         @timeout = 0
         return
       console.log("@timeout #{@timeout} / @intervalo #{@intervalo} / @_iniciadoEm #{@_iniciadoEm}")
-      @repeticoes = Math.floor(@timeout / @intervalo)
-      this.iniciar(response)
+      @repeticoes = Math.ceil(@timeout / @intervalo)
+      this.iniciar()
       return
 
     parar: (isChamadaInterna) ->
@@ -188,14 +161,14 @@ module.exports = (robot) ->
         @intervalo,
         @timeout,
         @texto,
-        @salas
+        @sala
       ])
 
     isRodando: ->
       return @timeout && !@_paradoEm
 
     toString: ->
-      return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, salas= #{@salas}, texto= '#{@texto}']"
+      return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}']"
 
   class RepeticaoSet
     @_hashSet
@@ -270,7 +243,7 @@ module.exports = (robot) ->
             intervalo : repeticao.intervalo,
             timeout : repeticao.timeout,
             texto : repeticao.texto,
-            salas : repeticao.salas,
+            sala: repeticao.sala,
             _construidoEm : repeticao._construidoEm,
             _iniciadoEm : repeticao._iniciadoEm,
             _paradoEm : repeticao._paradoEm
@@ -283,7 +256,6 @@ module.exports = (robot) ->
         rep.i = i
         rep
     )
-    robot.brain.set 'salas', salas
 
     return
 
@@ -293,7 +265,6 @@ module.exports = (robot) ->
 
 #    robot.brain.set 'repeticoes', undefined
 #    robot.brain.set 'repeticoesListadas', undefined
-#    robot.brain.set 'salas', undefined
 
     if isCarregado
       return
@@ -308,7 +279,7 @@ module.exports = (robot) ->
           dado.intervalo,
           dado.timeout,
           dado.texto,
-          dado.salas
+          dado.sala
         rep._construidoEm = dado._construidoEm
         rep._iniciadoEm = dado._iniciadoEm
         rep._paradoEm = dado._paradoEm
@@ -325,11 +296,6 @@ module.exports = (robot) ->
     fetch robot.brain.get('repeticoesListadas'), (rep) ->
       repeticoesListadas[rep.i] = rep
       return
-
-    if process.env.HUBOT_SALAS_PARA_REPETICAO
-      salas = process.env.HUBOT_SALAS_PARA_REPETICAO
-    else
-      salas = robot.brain.get 'salas'
 
     isCarregado = true
     return
