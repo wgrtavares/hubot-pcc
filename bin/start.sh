@@ -1,9 +1,10 @@
 #!/bin/sh
 
+#export HUBOT_LOG_LEVEL="debug"
+
 pid_file=/var/run/hubot-pcc.pid
 hubot_log_file=/home/wagner/hubot/pcc/bin/hubot.log
 tg_log_file=/home/wagner/hubot/pcc/bin/tg.log
-
 
 stop () {
 
