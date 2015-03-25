@@ -22,14 +22,37 @@ module.exports = (robot) ->
       return
     return
 
-  https = require 'https'
-
-  req = https.request options, (res) ->
+  req = require('https').request options, (res) ->
     res.setEncoding 'utf8'
     res.on 'data', (data) ->
-      dataJson = JSON.parse(data)
-      registrarPerguntasERepostas(conceitoEspecifico, 'respond') for conceitoEspecifico in dataJson.conceitosEspecificos
-      registrarPerguntasERepostas(conceitoGeral, 'hear') for conceitoGeral in dataJson.conceitosGerais
+      json = null;
+
+      localJson = robot.brain.get 'json'
+      remoteJsonData = data
+      if localJson && remoteJsonData
+        remoteJson = JSON.parse(remoteJsonData.toString())
+        json = if localJson.versao > remoteJson.versao then localJson else remoteJson
+      else if remoteJsonData
+        json = JSON.parse(remoteJsonData)
+      else
+        robot.logger.error('Não foi possível carregar o JSON de conceitos.')
+        return
+
+      robot.brain.set 'json', json
+
+      options.method = 'PUT'
+      req = require('https').request options, (res) ->
+        return
+      req.write(JSON.stringify(json))
+      req.end(null);
+
+      registrarPerguntasERepostas(conceitoEspecifico, 'respond') for conceitoEspecifico in json.conceitosEspecificos
+      registrarPerguntasERepostas(conceitoGeral, 'hear') for conceitoGeral in json.conceitosGerais
+
+      robot.respond /.*vers.o.*conceito.*[?]/i, (response) ->
+        response.send json.versao
+        return
       return
     return
   req.end()
+
