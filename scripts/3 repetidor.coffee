@@ -28,7 +28,14 @@ module.exports = (robot) ->
     if opcoes['repeticoes']
       opcoes['timeout'] = Number(opcoes['intervalo']) * Number(opcoes['repeticoes'])
     opcoes['texto'] = response.match[5]
-    opcoes['sala'] = response.envelope.room
+
+    findSala = new RegExp('[ ]*na[ ]*sala[ ]*([^ ]*)[ ]*(.*)')
+    result = findSala.exec(opcoes['texto'])
+    if result
+      opcoes['sala'] = result[1]
+      opcoes['texto'] = result[2]
+    else
+      opcoes['sala'] = response.envelope.room
 
     repeticao = new Repeticao opcoes
 
@@ -44,6 +51,9 @@ module.exports = (robot) ->
 
     return
 
+  respond /.*id.*sala[^?]*[?]/i, (response) ->
+    response.send response.envelope.room
+    return
 
   respond /repita[ ]*entre[ ]*([0-9]{1,2}:[0-9]{1,2})[ ]*e[ ]*([0-9]{1,2}:[0-9]{1,2})[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
 
@@ -303,6 +313,8 @@ module.exports = (robot) ->
       @_hashSet[key] = undefined
       return true
     contains: (value) ->
+      if !value
+        return false
       return !!@_hashSet[value.hash()]
     values: ->
       values = []
