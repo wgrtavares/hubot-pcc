@@ -1,12 +1,17 @@
 module.exports = (robot) ->
 
-  options =
+  httpsConnectionData =
+    readPath : 'http://myjson.com/4qtiv'
     hostname: 'api.myjson.com'
     port: 443
     path: '/bins/4qtiv'
     method: 'GET'
     headers:
       'Content-Type': 'application/json'
+
+  robot.on 'queryHttpsConnectionData', (callback) ->
+    callback httpsConnectionData
+    return
 
   registrarPerguntasERepostas = (conceito, tipoEscuta) ->
     regexp = new RegExp conceito.pergunta.regex, conceito.pergunta.modificador
@@ -22,7 +27,7 @@ module.exports = (robot) ->
       return
     return
 
-  req = require('https').request options, (res) ->
+  req = require('https').request httpsConnectionData, (res) ->
     res.setEncoding 'utf8'
     res.on 'data', (data) ->
       json = null;
@@ -40,8 +45,8 @@ module.exports = (robot) ->
 
       robot.brain.set 'json', json
 
-      options.method = 'PUT'
-      req = require('https').request options, (res) ->
+      httpsConnectionData.method = 'PUT'
+      req = require('https').request httpsConnectionData, (res) ->
         return
       req.write(JSON.stringify(json))
       req.end(null);
@@ -49,9 +54,6 @@ module.exports = (robot) ->
       registrarPerguntasERepostas(conceitoEspecifico, 'respond') for conceitoEspecifico in json.conceitosEspecificos
       registrarPerguntasERepostas(conceitoGeral, 'hear') for conceitoGeral in json.conceitosGerais
 
-      robot.respond /.*vers.o.*conceito.*[?]/i, (response) ->
-        response.send json.versao
-        return
       return
     return
   req.end()
