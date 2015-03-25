@@ -43,7 +43,7 @@ module.exports = (robot) ->
       repeticao.onStop = ->
         repeticoes.remove repeticao
         return
-      repeticao[tipoInicio] response
+      repeticao[tipoInicio] false, response
     else
       response.send "Esta repetição já existe."
       listarRepeticoes response
@@ -68,8 +68,8 @@ module.exports = (robot) ->
   respond /repita[^0-9]*([0-9]{1,5})[ ]*(vezes|vez)[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
 
     qtdRepeticoes = response.match[1]
-    if qtdRepeticoes > 1
-      qtdRepeticoes--
+#    if qtdRepeticoes > 1
+#      qtdRepeticoes--
 
     obj =
       repeticoes: qtdRepeticoes
@@ -146,22 +146,22 @@ module.exports = (robot) ->
       return
 
 
-    iniciarPorPeriodo:(isReinicio) ->
+    iniciarPorPeriodo:(isReinicio, response) ->
 
       @_iniciadoEm = (new Date()).getTime()
       @.parar true #isChamadaInterna
 
       _this = @
-      if isReinicio != true
-        setTimeout () ->
-          robot.messageRoom _this.sala, "Ok. Iniciando."
-          return
-        , 100
-
       setTimeout () ->
 
+        # Primeiro envio de confirmação para o usuário
         if isReinicio != true
-          robot.messageRoom _this.sala, _this.texto
+          if (response && response.envelope.room == _this.sala &&_this.periodo.isDentroPeriodo()) ||
+              (response && response.envelope.room != _this.sala)
+            if response
+              response.send 'Certo.'
+            else
+              robot.messageRoom _this.sala, _this.texto
 
         _this.intervaloRepeticaoId = setInterval () ->
           if _this.periodo.isDentroPeriodo()
@@ -178,21 +178,14 @@ module.exports = (robot) ->
       @_iniciadoEm = (new Date()).getTime()
       @.parar true #isChamadaInterna
 
-      _sala = @sala
-      if isReinicio != true
-        setTimeout () ->
-          robot.messageRoom _sala, "Ok. Iniciando."
-          return
-        , 100
-
       _this = @
       setTimeout () ->
 
         if isReinicio != true
-          robot.messageRoom _sala, _this.texto
+          robot.messageRoom _this.sala, _this.texto
 
         _this.intervaloRepeticaoId = setInterval () ->
-          robot.messageRoom _sala, _this.texto
+          robot.messageRoom _this.sala, _this.texto
           return
         , _this.intervalo
 
@@ -281,11 +274,11 @@ module.exports = (robot) ->
 
     toString: ->
       if (@repeticoes)
-        return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+        return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, sala= '#{@sala}' texto= '#{@texto}']"
       else if(@periodo)
-        return "[periodo=#{@periodo}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+        return "[periodo=#{@periodo}, intervalo=#{@intervalo} milisegundos, sala= '#{@sala}', texto= '#{@texto}']"
       else
-        return "[intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+        return "[intervalo=#{@intervalo} milisegundos, sala= '#{@sala}', texto= '#{@texto}']"
 
 
 
