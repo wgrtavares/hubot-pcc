@@ -28,14 +28,13 @@ module.exports = (robot) ->
     return
 
   req = require('https').request httpsConnectionData, (res) ->
-    res.setEncoding 'utf8'
     res.on 'data', (data) ->
       json = null;
 
       localJson = robot.brain.get 'json'
       remoteJsonData = data
       if localJson && remoteJsonData
-        remoteJson = JSON.parse(remoteJsonData.toString())
+        remoteJson = JSON.parse(remoteJsonData)
         json = if localJson.versao > remoteJson.versao then localJson else remoteJson
       else if remoteJsonData
         json = JSON.parse(remoteJsonData)

@@ -1,4 +1,3 @@
-#noinspection JSUnresolvedVariable
 module.exports = (robot) ->
 
   repeticoes = null
@@ -6,13 +5,15 @@ module.exports = (robot) ->
 
   respond = (regexp, callback) ->
     robot.respond regexp, (response) ->
-      carregar()
+      carregar(response)
       callback(response)
       persistir()
       return
     return
 
-  respond /repita[^0-9]*([0-9]{1,5})[ ]*(vezes|vez)[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
+
+  internalRespondIntervalo = (tipoInicio, response, opcoes) ->
+    intervalo = 0
     grandeza = response.match[4]
     switch grandeza
       when 'minutos','minuto' then intervalo = 60*1000
@@ -23,29 +24,55 @@ module.exports = (robot) ->
         response.send "opa, vc usou #{grandeza}. Tente novamente usando segundos, minutos, horas ou dias ;) "
         return
 
-    qtdRepeticoes = response.match[1]
-    if qtdRepeticoes > 1
-      qtdRepeticoes--
-    intervalo *= response.match[3]
-    timeout = intervalo * qtdRepeticoes
-    texto = response.match[5]
-    sala = response.envelope.room
+    opcoes['intervalo'] = intervalo * Number(response.match[3])
+    if opcoes['repeticoes']
+      opcoes['timeout'] = Number(opcoes['intervalo']) * Number(opcoes['repeticoes'])
+    opcoes['texto'] = response.match[5]
+    opcoes['sala'] = response.envelope.room
 
-    repeticao = new Repeticao qtdRepeticoes, intervalo, timeout, texto, sala
+    repeticao = new Repeticao opcoes
 
     if repeticoes.put repeticao
       repeticao.onStop = ->
         repeticoes.remove repeticao
         return
-      repeticao.iniciar response
+      repeticao[tipoInicio] response
     else
       response.send "Esta repetição já existe."
       listarRepeticoes response
     return
 
+    return
+
+
+  respond /repita[ ]*entre[ ]*([0-9]{1,2}:[0-9]{1,2})[ ]*e[ ]*([0-9]{1,2}:[0-9]{1,2})[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
+
+    obj =
+      periodo : new Periodo(response.match[1], response.match[2])
+
+    internalRespondIntervalo('iniciarPorPeriodo', response, obj)
+
+    return
+
+
+  respond /repita[^0-9]*([0-9]{1,5})[ ]*(vezes|vez)[ ]*em[ ]*intervalos[^0-9]*([0-9]{1,5})[ ]*([a-z]*)(.*)/i, (response) ->
+
+    qtdRepeticoes = response.match[1]
+    if qtdRepeticoes > 1
+      qtdRepeticoes--
+
+    obj =
+      repeticoes: qtdRepeticoes
+
+    internalRespondIntervalo('iniciarPorIntervalo', response, obj)
+
+    return
+
+
   respond /.*(repetindo)[^?]*[?]/i, (response) ->
     listarRepeticoes response
     return
+
 
   respond /.*(pare|cancele|parar|para).*(repetir|repeti..o)[^0-9]*([0-9]*)/i, (response) ->
     if !repeticoes.size()
@@ -69,63 +96,131 @@ module.exports = (robot) ->
     return
 
 
-  class Repeticao
+  class Periodo
 
-    constructor: (repeticoes, intervalo, timeout, texto, sala) ->
-      @repeticoes = repeticoes
-      @intervalo = intervalo
-      @timeout = timeout
-      @texto = texto
-      @sala = sala
-      @_construidoEm = (new Date()).getTime()
-      @_iniciadoEm = 0
-      @_paradoEm = 0
-      @onStop = null
+    constructor: (horaInicioStr, horaFimStr) ->
+      @dateTimeInicio = if horaInicioStr instanceof Date then horaInicioStr else @_parseDate horaInicioStr.split(':')
+      @dateTimeFim = if horaFimStr instanceof Date then horaFimStr else @_parseDate horaFimStr.split(':')
       return
 
-    iniciar: () ->
+    _parseDate: (arr) ->
+      return new Date(71, 1, 1, arr[0], arr[1], 0, 0)
+
+    isDentroPeriodo: (date) ->
+      if !date
+        date = new Date()
+      agora = @_parseDate([date.getHours(), date.getMinutes()])
+      return @dateTimeInicio.getTime() <= agora.getTime() && agora.getTime() < @dateTimeFim.getTime()
+
+    toString: ->
+      return "[inicio= #{@dateTimeInicio.toTimeString()}, fim= #{@dateTimeFim.toTimeString()}]"
+
+    toJSON: ->
+      return {dateTimeInicio:@dateTimeInicio.toJSON(), dateTimeFim:@dateTimeFim.toJSON()}
+
+
+  class Repeticao
+
+    @_iniciadoEm = 0
+    @_paradoEm = 0
+    @onStop = null
+
+    constructor: (options) ->
+      @repeticoes = options['repeticoes']
+      @intervalo = options['intervalo']
+      @timeout = options['timeout']
+      @texto = options['texto']
+      @sala = options['sala']
+      @periodo = options['periodo']
+      @_construidoEm = (new Date()).getTime()
+      return
+
+
+    iniciarPorPeriodo:(isReinicio) ->
 
       @_iniciadoEm = (new Date()).getTime()
-      this.parar true #isChamadaInterna
+      @.parar true #isChamadaInterna
+
+      _this = @
+      if isReinicio != true
+        setTimeout () ->
+          robot.messageRoom _this.sala, "Ok. Iniciando."
+          return
+        , 100
+
+      setTimeout () ->
+
+        if isReinicio != true
+          robot.messageRoom _this.sala, _this.texto
+
+        _this.intervaloRepeticaoId = setInterval () ->
+          if _this.periodo.isDentroPeriodo()
+            robot.messageRoom _this.sala, _this.texto
+          return
+        , _this.intervalo
+      , 500
+
+      return
+
+
+    iniciarPorIntervalo: (isReinicio) ->
+
+      @_iniciadoEm = (new Date()).getTime()
+      @.parar true #isChamadaInterna
 
       _sala = @sala
-      setTimeout () ->
-        robot.messageRoom _sala, "Ok. Iniciando."
-        return
-      , 100
-
-      obj = this
-      setTimeout () ->
-        obj._iniciadoEm = new Date().getTime()
-        robot.messageRoom _sala, obj.texto
-
-        obj.intervaloRepeticaoId = setInterval () ->
-          robot.messageRoom _sala, obj.texto
+      if isReinicio != true
+        setTimeout () ->
+          robot.messageRoom _sala, "Ok. Iniciando."
           return
-        , obj.intervalo
+        , 100
 
-        obj.timeoutRepeticaoId = setTimeout () ->
-          clearInterval(obj.intervaloRepeticaoId)
-          obj.intervaloRepeticaoId = null
-          clearTimeout(obj.timeoutRepeticaoId)
-          obj.timeoutRepeticaoId = null
-          obj._paradoEm = (new Date()).getTime()
-          if obj.onStop
-            obj.onStop()
+      _this = @
+      setTimeout () ->
+
+        if isReinicio != true
+          robot.messageRoom _sala, _this.texto
+
+        _this.intervaloRepeticaoId = setInterval () ->
+          robot.messageRoom _sala, _this.texto
           return
-        , obj.timeout
+        , _this.intervalo
+
+        _this.timeoutRepeticaoId = setTimeout () ->
+          clearInterval(_this.intervaloRepeticaoId)
+          _this.intervaloRepeticaoId = null
+          clearTimeout(_this.timeoutRepeticaoId)
+          _this.timeoutRepeticaoId = null
+          _this._paradoEm = (new Date()).getTime()
+          if _this.onStop
+            _this.onStop()
+          return
+        , _this.timeout
         return
       , 500
       return
 
+
     reiniciar: () ->
+      if (@timeout)
+        @._reiniciarPorIntervalo()
+      else if (@periodo)
+        @._reiniciarPorPeriodo()
+      else
+        robot.logger.error("Repeticao.reiniciar: impossível distinguir sobre intervalo ou periodo. #{@.toString()}")
+      return
+
+    _reiniciarPorPeriodo: () ->
+      @.iniciarPorPeriodo(true)
+      return
+
+    _reiniciarPorIntervalo: () ->
       @timeout = @_iniciadoEm + @timeout - (new Date()).getTime();
       if @timeout <= 0
         @timeout = 0
         return
-      console.log("@timeout #{@timeout} / @intervalo #{@intervalo} / @_iniciadoEm #{@_iniciadoEm}")
       @repeticoes = Math.ceil(@timeout / @intervalo)
-      this.iniciar()
+      @.iniciarPorIntervalo(true)
       return
 
     parar: (isChamadaInterna) ->
@@ -141,6 +236,7 @@ module.exports = (robot) ->
 
       return
 
+
     _hash: (valArr) ->
       hash = 0
       for val in valArr
@@ -155,20 +251,33 @@ module.exports = (robot) ->
           return
       return hash;
 
+
     hash: ->
-      return this._hash([
+      return @._hash([
         @repeticoes,
         @intervalo,
         @timeout,
         @texto,
-        @sala
+        @sala,
+        @periodo
       ])
 
+
     isRodando: ->
-      return @timeout && !@_paradoEm
+      return (@timeout||@periodo) && !@_paradoEm
+
+    isPeriodo: ->
+      return !!@periodo
 
     toString: ->
-      return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}']"
+      if (@repeticoes)
+        return "[repeticões=#{@repeticoes}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+      else if(@periodo)
+        return "[periodo=#{@periodo}, intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+      else
+        return "[intervalo=#{@intervalo} milisegundos, texto= '#{@texto}', sala= '#{@sala}']"
+
+
 
   class RepeticaoSet
     @_hashSet
@@ -179,14 +288,14 @@ module.exports = (robot) ->
     get: (hash) ->
       return @_hashSet[hash]
     put: (value) ->
-      if (this.contains(value))
+      if (@.contains(value))
         return false
       key = value.hash()
       @_keyList.push(key)
       @_hashSet[key] = value
       return true
     remove: (value) ->
-      if (!this.contains(value))
+      if (!@.contains(value))
         return false
       key = value.hash()
       @_hashSet[key].parar()
@@ -203,7 +312,7 @@ module.exports = (robot) ->
         if value.isRodando()
           values.push(value)
         else
-          this.remove value
+          @.remove value
       return values
     size: ->
       return @_keyList.length
@@ -232,6 +341,7 @@ module.exports = (robot) ->
       , i * 750
     return
 
+
   persistir = ->
 
     fetch = (arrRepeticao) ->
@@ -244,6 +354,7 @@ module.exports = (robot) ->
             timeout : repeticao.timeout,
             texto : repeticao.texto,
             sala: repeticao.sala,
+            periodo: if repeticao.periodo then repeticao.periodo.toJSON() else null,
             _construidoEm : repeticao._construidoEm,
             _iniciadoEm : repeticao._iniciadoEm,
             _paradoEm : repeticao._paradoEm
@@ -259,6 +370,7 @@ module.exports = (robot) ->
 
     return
 
+
   isCarregado = false;
 
   carregar = (response) ->
@@ -273,13 +385,17 @@ module.exports = (robot) ->
       if !arr || arr.length == 0
         return
       for dado in arr
-        if (!dado.timeout)
+        if (!dado.timeout && !(dado.periodo && dado.periodo.dateTimeInicio && dado.periodo.dateTimeFim))
           continue
-        rep = new Repeticao dado.repeticoes,
-          dado.intervalo,
-          dado.timeout,
-          dado.texto,
-          dado.sala
+
+        opcoes =
+          repeticoes: dado.repeticoes
+          intervalo :dado.intervalo
+          timeout: dado.timeout
+          texto: dado.texto
+          sala: dado.sala
+          periodo: new Periodo(new Date(dado.periodo.dateTimeInicio), new Date(dado.periodo.dateTimeFim))
+        rep = new Repeticao opcoes
         rep._construidoEm = dado._construidoEm
         rep._iniciadoEm = dado._iniciadoEm
         rep._paradoEm = dado._paradoEm
