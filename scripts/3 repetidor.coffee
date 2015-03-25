@@ -394,7 +394,11 @@ module.exports = (robot) ->
           timeout: dado.timeout
           texto: dado.texto
           sala: dado.sala
-          periodo: new Periodo(new Date(dado.periodo.dateTimeInicio), new Date(dado.periodo.dateTimeFim))
+          periodo:
+            if dado.periodo
+              new Periodo(new Date(dado.periodo.dateTimeInicio), new Date(dado.periodo.dateTimeFim))
+            else
+              null
         rep = new Repeticao opcoes
         rep._construidoEm = dado._construidoEm
         rep._iniciadoEm = dado._iniciadoEm
