@@ -2,11 +2,15 @@
 
 #export HUBOT_LOG_LEVEL="debug"
 export HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS='https://api.myjson.com/bins/4qtiv'
+export HUBOT_REMOTE_JSON_READ_PATH='http://myjson.com/4qtiv'
+export HUBOT_REMOTE_JSON_HTTPS_HOSTNAME='api.myjson.com'
+export HUBOT_REMOTE_JSON_HTTPS_PORT='443'
+export HUBOT_REMOTE_JSON_HTTPS_PATH='/bins/4qtiv'
+export HUBOT_SERVICE_NAME='hubot-pcc'
 
 export HUBOT_SERVICE_PID_FILE='/var/run/hubot-pcc.pid'
 export HUBOT_SERVICE_LOG_FILE='/home/wagner/hubot/pcc/bin/hubot.log'
 export TG_SERVICE_LOG_FILE='/home/wagner/hubot/pcc/bin/tg.log'
-export HUBOT_SERVICE_NAME='hubot-pcc'
 
 stop () {
 

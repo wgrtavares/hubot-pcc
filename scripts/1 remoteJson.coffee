@@ -1,10 +1,10 @@
 module.exports = (robot) ->
 
   httpsConnectionData =
-    readPath : 'http://myjson.com/4qtiv'
-    hostname: 'api.myjson.com'
-    port: 443
-    path: '/bins/4qtiv'
+    readPath : process.env.HUBOT_REMOTE_JSON_READ_PATH
+    hostname: process.env.HUBOT_REMOTE_JSON_HTTPS_HOSTNAME
+    port: process.env.HUBOT_REMOTE_JSON_HTTPS_PORT
+    path: process.env.HUBOT_REMOTE_JSON_HTTPS_PATH
     method: 'GET'
     headers:
       'Content-Type': 'application/json'
