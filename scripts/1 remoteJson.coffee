@@ -24,7 +24,6 @@
 module.exports = (robot) ->
 
   httpsConnectionData =
-    readPath : process.env.HUBOT_REMOTE_JSON_READ_PATH
     hostname: process.env.HUBOT_REMOTE_JSON_HTTPS_HOSTNAME
     port: process.env.HUBOT_REMOTE_JSON_HTTPS_PORT
     path: process.env.HUBOT_REMOTE_JSON_HTTPS_PATH
