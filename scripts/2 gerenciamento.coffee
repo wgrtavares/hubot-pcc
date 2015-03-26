@@ -1,15 +1,25 @@
+# Description:
+#   <description of the scripts functionality>
+#
+# Dependencies:
+#   "<module name>": "<module version>"
+#
+# Configuration:
+#   HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS
+#   HUBOT_SERVICE_NAME
+#
+# Commands:
+#   hubot <trigger> - <what the respond trigger does>
+#   <trigger> - <what the hear trigger does>
+#
+# Notes:
+#
+# Author:
+#   wgrtavares
 module.exports = (robot) ->
 
-
-  httpsConnectionData = null
-
-  loadHttpsConnectionData = (robot) ->
-    if httpsConnectionData
-      return
-    robot.emit 'queryHttpsConnectionData', (_httpsConnectionData) ->
-      httpsConnectionData = _httpsConnectionData
-      return
-    return
+  url =  process.env.HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS
+  serviceName = process.env.HUBOT_SERVICE_NAME
 
   respond = (regexp, callback) ->
     robot.respond regexp, (response) ->
@@ -21,12 +31,10 @@ module.exports = (robot) ->
   reiniciar = (robot, response) ->
     response.send 'Reiniciando.'
 
-    robot.brain.set 'gerenciamento.reinicio', response.envelope.room
     setTimeout ->
       require('child_process')
-      .exec 'sudo service hubot-pcc restart', (err, stdout, stderr) ->
+      .exec "sudo service #{serviceName} restart", (err, stdout, stderr) ->
           if err
-            robot.brain.set 'gerenciamento.reinicio', null
             robot.logger.error "Ao reiniciar: \n#{err}\n#{stderr}"
             response.send 'Ops, problemas com a reinicialização. Veja: \n#{err}\n#{stderr}'
           return
@@ -41,7 +49,7 @@ module.exports = (robot) ->
   respond /carregue estes conceitos (.*)/i, (response) ->
     json = response.match[1]
 
-    robot.http("https://#{httpsConnectionData.hostname}#{httpsConnectionData.path}")
+    robot.http(url)
       .header('Content-Type', 'application/json')
       .put(json) (err, res, body) ->
         if err
