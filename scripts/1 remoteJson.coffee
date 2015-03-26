@@ -1,10 +1,32 @@
+# Description:
+#   Lê arquivo JSON de conceitos na núvem e carrega no cérebro. Isso facilita a atualização de perguntas e respostas.
+#   Veja um exemplo de JSON de conceito em https://api.myjson.com/bins/4qtiv.
+#
+# Dependencies:
+#   "redis-brain": "1.x"
+#
+# Configuration:
+#   HUBOT_REMOTE_JSON_HTTPS_HOSTNAME
+#     Ex: 'api.myjson.com'
+#   HUBOT_REMOTE_JSON_HTTPS_PORT
+#     Ex: '443'
+#   HUBOT_REMOTE_JSON_HTTPS_PATH
+#     Ex: '/bins/4qtiv'
+#
+# Commands:
+#   Os comandos variam de acordo com a configuração do JSON de conceitos.
+#
+# Notes:
+#   Todas as perguntas e respostas devem estar no JSON de conceitos da núvem.
+#
+# Author:
+#   wgrtavares
 module.exports = (robot) ->
 
   httpsConnectionData =
-    readPath : 'http://myjson.com/4qtiv'
-    hostname: 'api.myjson.com'
-    port: 443
-    path: '/bins/4qtiv'
+    hostname: process.env.HUBOT_REMOTE_JSON_HTTPS_HOSTNAME
+    port: process.env.HUBOT_REMOTE_JSON_HTTPS_PORT
+    path: process.env.HUBOT_REMOTE_JSON_HTTPS_PATH
     method: 'GET'
     headers:
       'Content-Type': 'application/json'

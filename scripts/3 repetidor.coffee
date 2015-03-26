@@ -1,3 +1,46 @@
+# Description:
+#   Permite programar o jarvis para repetir mensagens.
+#
+# Dependencies:
+#   "redis-brain": "1.x"
+#
+# Configuration:
+#   Não há
+#
+# Commands:
+#
+#   jarvis qual o id desta sala? - Jarvis responderá qual o id da sala. Esta informação é util para os comandos abaixo
+# que pode receber o id da sala.
+#
+#   jarvis o que você está repetindo? - Jarvis listará todas as repetições programadas. Será possível ver a mensagem
+# repetida, id da sala, periodo/intervalo/quantidade da repeticão.
+#
+#   jarvis pare de repetir <id repetição> - Cancelara a execução de uma repetição. Use o comando acima para visualizar o
+# id da repetição.
+#
+#   jarvis repita <nº vezes> vezes em intervalos de <tempo> <dia(s)|hora(s)|minuto(s)|segundo(s)> <mensagem> - Se
+# <nº vezes> = 10, <tempo> = 1, <dia(s)|hora(s)|minuto(s)|segundo(s)> = hora e <mensagem> = foo bar, então foo bar será
+# repetido por 10 vezes consecutivas em intervalos de 1 hora na sala/conversa onde foi digitado este comando.
+#
+#   jarvis repita <nº vezes> vezes em intervalos de <tempo> <dia(s)|hora(s)|minuto(s)|segundo(s)> na sala <id sala>
+# <mensagem> -  O mesmo que o comando acima, porém, a repetição ocorrerá na sala cujo id foi especificao em <id sala>.
+#
+#   jarvis repita entre <hora inicio> e <hora fim> em intervalos de <tempo> <dia(s)|hora(s)|minuto(s)|segundo(s)>
+# <mensagem> - Se <hora inicio> = 08:00, <hora fim> = 22:00, <dia(s)|hora(s)|minuto(s)|segundo(s)> = hora e <mensagem> =
+# foo bar, então foo bar será repetido sempre que a hora atual esteja entre 08:00 e 22:00, em intervalos de 1 hora na
+# sala/conversa onde foi digitado este comando. A repetição só cessará quando for pedido para o jarvis parar de repetir.
+#
+#   jarvis repita entre <hora inicio> e <hora fim> em intervalos de <tempo> <dia(s)|hora(s)|minuto(s)|segundo(s)> na
+# sala <id sala > <mensagem> - O mesmo que o comando acima, porém, a repetição ocorrerá na sala cujo id foi especificado
+# em <id sala>.
+#
+# Notes:
+#   Este script persiste as repetições cadastradas. Porém, em caso de reinicio do jarvis, será necessário utilizar algum
+# dos comandos acima para que sejam reinicadas as repetições.
+#
+# Author:
+#   wgrtavares
+#
 module.exports = (robot) ->
 
   repeticoes = null
