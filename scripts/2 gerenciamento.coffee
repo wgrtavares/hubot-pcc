@@ -1,18 +1,23 @@
 # Description:
-#   <description of the scripts functionality>
+#   Permite algumas funções de auto gerenciamento para evitar o uso do terminal linux.
 #
 # Dependencies:
-#   "<module name>": "<module version>"
+#   "redis-brain": "1.x"
 #
 # Configuration:
 #   HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS
 #   HUBOT_SERVICE_NAME
 #
 # Commands:
-#   hubot <trigger> - <what the respond trigger does>
-#   <trigger> - <what the hear trigger does>
+#   jarvis reinicie - Faz com que o serviço hubot+tg seja reiniciado.
+#   jarvis carregue estes conceitos <json> - Faz com que o jarvis execute uma requisição https do tipo PUT para o
+# endereço contido em HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS. Após isto ele atualiza seu próprio JSON de conceitos e se
+# reinicia (como no comando acima).
+#   jarvis qual a versão atual do seu conceito? - Retorna o valor da chave "versão" do JSON de conceitos.
+#   jarvis me mostre o json de conceitos - Retorna o JSON de conceitos atual.
 #
 # Notes:
+#   Não há
 #
 # Author:
 #   wgrtavares
