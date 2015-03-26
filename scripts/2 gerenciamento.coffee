@@ -6,6 +6,7 @@
 #
 # Configuration:
 #   HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS
+#   HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS_READ_ONLY
 #   HUBOT_SERVICE_NAME
 #
 # Commands:
@@ -25,13 +26,7 @@ module.exports = (robot) ->
 
   url =  process.env.HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS
   serviceName = process.env.HUBOT_SERVICE_NAME
-
-  respond = (regexp, callback) ->
-    robot.respond regexp, (response) ->
-      loadHttpsConnectionData(robot)
-      callback(response)
-      return
-    return
+  urlReadOnly = process.env.HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS_READ_ONLY
 
   reiniciar = (robot, response) ->
     response.send 'Reiniciando.'
@@ -47,11 +42,11 @@ module.exports = (robot) ->
     , 2000
     return
 
-  respond /reinicie/i, (response) ->
+  robot.respond /reinicie/i, (response) ->
     reiniciar robot, response
     return
 
-  respond /carregue estes conceitos (.*)/i, (response) ->
+  robot.respond /carregue estes conceitos (.*)/i, (response) ->
     json = response.match[1]
 
     robot.http(url)
@@ -68,7 +63,7 @@ module.exports = (robot) ->
         return
     return
 
-  respond /.*vers.o.*conceito.*[?]/i, (response) ->
+  robot.respond /.*vers.o.*conceito.*[?]/i, (response) ->
     json = robot.brain.get 'json'
     if json
       response.send json.versao
@@ -76,8 +71,8 @@ module.exports = (robot) ->
       response.send 'Não encontrei o json de conceitos no meu cérebro!'
     return
 
-  respond /me mostre o json de conceitos/i, (response) ->
-    response.send "#{httpsConnectionData.readPath}"
+  robot.respond /me mostre o json de conceitos/i, (response) ->
+    response.send "#{urlReadOnly}"
     return
 
   return
