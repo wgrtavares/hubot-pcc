@@ -6,6 +6,8 @@ export HUBOT_GERENCIAMENTO_URL_JSON_CONCEITOS_READ_ONLY='http://myjson.com/4qtiv
 export HUBOT_REMOTE_JSON_HTTPS_HOSTNAME='api.myjson.com'
 export HUBOT_REMOTE_JSON_HTTPS_PORT='443'
 export HUBOT_REMOTE_JSON_HTTPS_PATH='/bins/4qtiv'
+#export HUBOT_MONITOR_URL_JSON='https://api.myjson.com/bins/4qtiv'
+export HUBOT_MONITOR_IS_CONSULTA_WEB_NA_CARGA='false'
 export HUBOT_SERVICE_NAME='hubot-pcc'
 
 export HUBOT_SERVICE_PID_FILE='/var/run/hubot-pcc.pid'
