@@ -2,14 +2,18 @@
   "name": "jarvis",
   "version": "1.0.0",
   "private": true,
-
   "author": "Wagner Castro <wagner.ltc@gmail.com>",
-
   "description": ".",
-
   "dependencies": {
+      "redis": "*"
   },
-
+  "devDependencies": {
+    "mocha": "^2.2.1",
+    "chai": "2.2.0"
+  },
+  "scripts": {
+    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script"
+  },
   "engines": {
     "node": "0.10.x"
   }
