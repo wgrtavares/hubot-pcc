@@ -13,6 +13,8 @@ export HUBOT_SERVICE_NAME='hubot-pcc'
 export HUBOT_SERVICE_PID_FILE='/var/run/hubot-pcc.pid'
 export HUBOT_SERVICE_LOG_FILE='/home/wagner/hubot/pcc/bin/hubot.log'
 export TG_SERVICE_LOG_FILE='/home/wagner/hubot/pcc/bin/tg.log'
+export TG_MODULES_TG_PATH='/home/wagner/hubot/pcc/node_modules/hubot-tg'
+export TG_CLI='/home/wagner/tg/bin/telegram-cli'
 
 stop () {
 
@@ -33,8 +35,8 @@ start () {
   fi
 
   echo "Iniciando tg..."
-  cd /home/wagner/hubot/pcc/node_modules/hubot-tg
-  /home/wagner/tg/bin/telegram-cli -s hubot.lua -P 1123 1>>"$TG_SERVICE_LOG_FILE"  2>>"$TG_SERVICE_LOG_FILE" &
+  cd "$TG_MODULES_TG_PATH"
+  "$TG_CLI" -k tg-server.pub -s hubot.lua -P 1123 1>>"$TG_SERVICE_LOG_FILE"  2>>"$TG_SERVICE_LOG_FILE" &
   echo "$!" | sudo tee "$HUBOT_SERVICE_PID_FILE"
 
   echo "Iniciando hubot..."
