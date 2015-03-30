@@ -19,22 +19,22 @@ class Buffer
     return
   toString: ->
     str =+ executable+'\n' for executable in @executables
-    return "[tamanho= #{maxLength_}\nmonitores=[\n#{str}\n]\n]"
+    return "[tamanho= #{@maxLength_}\nmonitores=[\n#{str}\n]\n]"
 
 class MonitorDeSala extends Executable
-  @regexp = @salaMonitorada = @salaResposta = @autores = @excetoAutores = null
-  constructor: (@buffers, @regexp, @salaMonitorada, @salaResposta, @autores = [],  @excetoAutores = []) ->
+  @robot = @buffers = @regexp = @salaMonitorada = @salaResposta = @autores = @excetoAutores = null
+  constructor: (@robot, @buffers, @regexp, @salaMonitorada, @salaResposta, @autores = [],  @excetoAutores = []) ->
   execute: (envelope) ->
     return if envelope.user in @excetoAutores
     if @autores.length?
       return unless envelope.user in @autores
     regexp_ = new RegExp @regexp, 'i'
     result_ = regexp_.exec(envelope.message.text)
-    return unless result_[0]?
+    return unless result_?
     str = ''
-    for bufferedEnvelope_ in buffers[envelope.room].queue[..]
-      str =+  bufferedEnvelope_.user + ': ' + bufferedEnvelope_.message.text + '\n'
-    robot.messageRoom(@salaResposta, str)
+    for bufferedEnvelope_ in @buffers[envelope.room].queue
+      str = str.concat bufferedEnvelope_.user + ': ' + bufferedEnvelope_.message.text + '\n'
+    @robot.messageRoom(@salaResposta, str)
     return
   toJSON: ->
     return {
@@ -61,7 +61,7 @@ f_ = (robot) ->
     indicePorChat = {}
     for monitorDado_ in monitoresDados_
       indicePorChat[monitorDado_.salaMonitorada] = [] unless indicePorChat[monitorDado_.salaMonitorada]?
-      indicePorChat[monitorDado_.salaMonitorada].push new MonitorDeSala buffers_, monitorDado_.regexp,
+      indicePorChat[monitorDado_.salaMonitorada].push new MonitorDeSala robot, buffers_, monitorDado_.regexp,
         monitorDado_.salaMonitorada, monitorDado_.salaResposta, monitorDado_.autores, monitorDado_.excetoAutores
     for salaMonitorada_, monitoresDeSala_ of indicePorChat
       buffers_[salaMonitorada_] = new Buffer(bufferMaxLength, monitoresDeSala_)
