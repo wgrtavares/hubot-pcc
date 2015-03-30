@@ -1,6 +1,5 @@
 class Executable
   constructor: ->
-    return
   execute: (obj) ->
     return obj
 
@@ -8,7 +7,6 @@ class Buffer
   @maxLength_ = @executables = @queue = null
   constructor: (@maxLength_ = 10, @executables = []) ->
     @queue = []
-    return
   put: (obj_) ->
     @queue.push(obj_)
     if @queue.length == @maxLength_ + 1
@@ -26,7 +24,6 @@ class Buffer
 class MonitorDeSala extends Executable
   @regexp = @salaMonitorada = @salaResposta = @autores = @excetoAutores = null
   constructor: (@buffers, @regexp, @salaMonitorada, @salaResposta, @autores = [],  @excetoAutores = []) ->
-    return
   execute: (envelope) ->
     return if envelope.user in @excetoAutores
     if @autores.length?
@@ -41,16 +38,15 @@ class MonitorDeSala extends Executable
     return
   toJSON: ->
     return {
-    regexp: @regexp
-    autores: @autores
-    excetoAutores: @excetoAutores
-    salaMonitorada: @salaMonitorada
-    salaResposta: @salaResposta
+      @regexp,
+      @autores,
+      @excetoAutores,
+      @salaMonitorada,
+      @salaResposta
     }
   toString: ->
     return "[regexp= #{@regexp}, salaMonitorada= #{@salaMonitorada}," +
     "salaResposta= #{@salaResposta}, autores= #{@autores}, excetoAutores= #{@excetoAutores}]"
-
 
 f_ = (robot) ->
 
